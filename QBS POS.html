@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>QADIR BAKHSH STORE - POS (Fixed Totals Hide/Show)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    /* --- Design similar to your preferred earlier layout --- */
+    body { font-family: Arial, sans-serif; margin: 0; background: #f4f6f8; direction: ltr; }
+    header { background: #2c3e50; color: white; text-align: center; padding: 15px; font-size: 26px; font-weight: bold; }
+    header small { display:block; font-size:14px; margin-top:4px; font-weight:normal; }
+    nav { background:#34495e; padding:10px; text-align:center; position:sticky; top:0; z-index:10; }
+    nav button { background:#3498db; border:none; color:white; padding:10px 18px; margin:5px; border-radius:6px; cursor:pointer; font-size:15px; }
+    nav button:hover { background:#2980b9; }
+    .container { padding: 18px; max-width: 1100px; margin: 0 auto; }
+    input, button, select, textarea { font-size: 16px; padding: 8px 10px; margin: 4px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
+    button { background: #3498db; color: white; border: none; cursor: pointer; }
+    button:hover { background: #2980b9; }
+    .btn-small { font-size: 13px; padding: 5px 8px; margin-left:6px; }
+    .btn-del { background:#e74c3c; color:#fff; border:none; padding:4px 7px; border-radius:6px; cursor:pointer; font-size:12px; }
+    .btn-edit { background:#f39c12; color:#fff; border:none; padding:4px 7px; border-radius:6px; cursor:pointer; font-size:12px; }
+    .btn-print { background:#27ae60; color:#fff; border:none; padding:6px 8px; border-radius:6px; cursor:pointer; }
+    .card { background: white; padding: 14px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 18px; }
+    .grid-2 { display:grid; grid-template-columns: 1fr 420px; gap:18px; align-items:start; }
+    .grid-3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; }
+    .list-scroll { max-height: 260px; overflow-y:auto; padding: 8px; border:1px solid #e5e5e5; border-radius:8px; background:#fafafa; }
+    .receipt { font-family: Arial, sans-serif; width: 320px; margin: 0 auto; text-align: center; padding:10px; }
+    .delete-log { color: #c0392b; font-size: 13px; margin: 4px 0; }
+    .calc-buttons button { width:60px; height:48px; margin:6px; border-radius:6px; font-size:18px; }
+    .small-muted { font-size:13px; color:#666; }
+    .list-row { display:flex; align-items:center; justify-content:space-between; padding:6px 4px; border-bottom:1px solid #eee; }
+    .list-left { flex:1; text-align:left; }
+    .category-badge { display:inline-block; padding:4px 8px; border-radius:6px; background:#ecf0f1; font-size:12px; margin-left:6px; }
+    @media print {
+      body * { visibility: hidden; }
+      #printSection, #printSection * { visibility: visible; }
+      #printSection { position: absolute; left: 50%; top: 0; transform: translateX(-50%); }
+      .btn-del, .btn-edit, .btn-small { display:none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    قادربخش اسٹور
+    <small>📞 03056184239</small>
+  </header>
+
+  <nav>
+    <button onclick="showPage('pos')">POS System</button>
+    <button onclick="showPage('calc')">Graming Calculator</button>
+    <button onclick="showPage('basicCalc')">Calculator</button>
+    <button onclick="showPage('stock')">Out of Stock</button>
+    <button onclick="showPage('dasti')">دستی بقایا</button>
+    <button onclick="showPage('khata')">Khata Wasooli List</button>
+  </nav>
+
+  <div class="container">
+
+    <!-- POS + Right column (history & logs) -->
+    <div id="pos" class="card">
+      <div style="text-align:center; margin-bottom:10px;">
+        <input id="amount" type="number" placeholder="Enter Sale Amount (Rs)" style="width:300px;" />
+        <button onclick="printBill()">Print Bill</button>
+        <button onclick="clearSales()" style="background:#e67e22;">Clear Sales</button>
+      </div>
+
+      <div style="text-align:center; margin-bottom:10px;">
+        <input id="expense" type="number" placeholder="Enter Expense Amount (Rs)" style="width:300px;" />
+        <button onclick="addExpense()">Add Expense</button>
+        <button onclick="clearExpenses()" style="background:#e74c3c;">Clear Expense</button>
+      </div>
+
+      <div style="text-align:center; margin-bottom:10px;">
+        <input id="baqayaAmount" type="number" placeholder="بقایا رقم درج کریں" style="width:300px;" />
+        <button onclick="printBaqaya()">پرنٹ بقایا</button>
+        <button onclick="clearBaqaya()" style="background:#c0392b;">Clear Baqaya</button>
+      </div>
+
+      <div id="totalsBox" class="card" style="margin-top:6px;">
+        <div id="totalsContent" style="text-align:center; display:none;">
+          Total Sales: <span id="totalSales">0</span><br>
+          Grand Total Sales: Rs. <span id="grandTotal">0.00</span><br>
+          <hr>
+          Total Expenses: <span id="totalExpenses">0</span><br>
+          Grand Total Expense: Rs. <span id="grandExpense">0.00</span>
+        </div>
+        <div style="text-align:center; margin-top:8px;">
+          <button id="totalsToggleBtn" onclick="toggleTotals()">👁 Show</button>
+          <button onclick="changePassword()" style="background:#8e44ad; margin-left:8px;">🔑 Change Password</button>
+          <button onclick="sendToWhatsApp()" style="background:#25D366; margin-left:8px;">📲 Send to WhatsApp</button>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-top:12px;">
+        <div class="card">
+          <h3 style="margin-top:0;">Sales History</h3>
+          <div id="salesList" class="list-scroll"></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0;">Expense History</h3>
+          <div id="expenseList" class="list-scroll"></div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-top:12px;">
+        <div class="card">
+          <h3 style="margin-top:0;">بقایا History</h3>
+          <div id="baqayaList" class="list-scroll"></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0;">Delete Log</h3>
+          <div id="deleteList" class="list-scroll"></div>
+          <div style="text-align:center; margin-top:8px;">
+            <button onclick="clearDeleteLog()" style="background:#c0392b;">Clear Delete Log</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- end pos card -->
+
+    <!-- Print section (hidden) -->
+    <div id="printSection" class="receipt" style="display:none;"></div>
+
+    <!-- Graming Calculator -->
+    <div id="calc" class="card" style="display:none; margin-top:18px;">
+      <h3 style="margin-top:0;">Graming Calculator</h3>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <div style="flex:1; min-width:220px;">
+          <label class="small-muted">Rate per KG (Rs)</label><br>
+          <input id="rate" type="number" placeholder="Example: 200" style="width:100%;" /><br>
+          <label class="small-muted">Grams</label><br>
+          <input id="grams" type="number" placeholder="Example: 250" style="width:100%;" /><br>
+          <div style="margin-top:8px;">
+            <button onclick="calcAmount()">Price</button>
+            <button onclick="clearAllCalc()" style="background:#e67e22;">Clear</button>
+          </div>
+        </div>
+        <div style="flex:1; min-width:200px;">
+          <label class="small-muted">Amount (Rs)</label><br>
+          <input id="calcAmountInput" type="number" placeholder="Example: 50" style="width:100%;" /><br>
+          <div style="margin-top:8px;">
+            <button onclick="calcGrams()">Grams</button>
+          </div>
+          <div id="result" style="margin-top:12px; font-weight:700;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Basic Calculator -->
+    <div id="basicCalc" class="card" style="display:none; margin-top:18px;">
+      <h3 style="margin-top:0;">Calculator</h3>
+      <div style="display:flex; gap:12px;">
+        <div style="flex:1;">
+          <input id="calcDisplay" type="text" placeholder="Type expression" style="width:100%; font-size:16px; padding:10px; text-align:left;" />
+          <div class="calc-buttons" style="margin-top:8px;">
+            <button onclick="pressCalc('7')">7</button><button onclick="pressCalc('8')">8</button><button onclick="pressCalc('9')">9</button><button onclick="pressCalc('/')">÷</button><br>
+            <button onclick="pressCalc('4')">4</button><button onclick="pressCalc('5')">5</button><button onclick="pressCalc('6')">6</button><button onclick="pressCalc('*')">×</button><br>
+            <button onclick="pressCalc('1')">1</button><button onclick="pressCalc('2')">2</button><button onclick="pressCalc('3')">3</button><button onclick="pressCalc('-')">-</button><br>
+            <button onclick="pressCalc('0')">0</button><button onclick="pressCalc('.')">.</button><button onclick="calculateResult()">=</button><button onclick="pressCalc('+')">+</button><br>
+            <button onclick="backspaceCalc()" style="background:#f39c12;">⌫</button>
+            <button onclick="clearCalc()" style="background:#e74c3c;">Clear</button>
+          </div>
+        </div>
+        <div style="width:320px;">
+          <h4 style="margin-top:0;">History</h4>
+          <div id="basicCalcHistory" class="list-scroll"></div>
+          <div style="padding:10px; background:#ecf0f1; border-radius:6px; margin-top:8px; text-align:center;">
+            Total = <span id="calcTotal">0</span>
+            <button onclick="printCalc()" style="float:right; background:#27ae60;">🖨 Print</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Out of Stock & Categories -->
+    <div id="stock" class="card" style="display:none; margin-top:18px;">
+      <h3 style="margin-top:0;">Out of Stock</h3>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <input id="stockInput" type="text" placeholder="Item" style="flex:1; min-width:200px;" />
+        <select id="stockCategorySelect" style="width:180px;"></select>
+        <button onclick="addStock()">Add</button>
+        <button onclick="clearStock()" style="background:#c0392b;">Clear All</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <label class="small-muted">Filter:</label>
+        <select id="filterCategory" onchange="renderStock()"><option value="ALL">All Categories</option></select>
+      </div>
+
+      <div style="margin-top:12px; border-top:1px solid #eee; padding-top:10px;">
+        <h4 style="margin-top:0;">Manage Categories</h4>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <input id="newCategoryInput" type="text" placeholder="نیا کیٹیگری لکھیں" />
+          <button onclick="addCategory()">Add Category</button>
+          <button onclick="clearCategories()" style="background:#e67e22;">Clear Categories</button>
+        </div>
+        <div id="categoriesList" class="list-scroll" style="margin-top:10px;"></div>
+      </div>
+
+      <div id="outOfStockList" class="list-scroll" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- Dasti Baqaya -->
+    <div id="dasti" class="card" style="display:none; margin-top:18px;">
+      <h3 style="margin-top:0;">دستی بقایا</h3>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input id="dastiInput" type="text" placeholder="کسٹمر کا نام اور سامان" style="flex:1;" />
+        <button onclick="addDasti()">Add</button>
+        <button onclick="clearDasti()" style="background:#c0392b;">Clear All</button>
+      </div>
+      <div id="dastiBaqayaList" class="list-scroll" style="margin-top:12px;"></div>
+    </div>
+
+
+    <!-- Khata Wasooli List -->
+    <div id="khata" class="card" style="display:none; margin-top:18px;">
+      <h3 style="margin-top:0;">Khata Wasooli List</h3>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <input id="khataName" type="text" placeholder="Customer Name" style="flex:1; min-width:200px;" />
+        <input id="khataAmount" type="number" placeholder="Amount (Rs)" style="width:150px;" />
+        <button onclick="addKhata()">Add</button>
+        <button onclick="clearKhata()" style="background:#c0392b;">Clear All</button>
+      </div>
+      <div style="display:flex; gap:6px; margin-top:12px;"><input type="text" id="khataSearch" placeholder="Search by name..." oninput="renderKhata()" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:6px;" /><button onclick="clearKhataSearch()" style="background:#e67e22; color:#fff; border:none; padding:8px 12px; border-radius:6px;">❌ Clear</button></div>
+<div id="khataList" class="list-scroll" style="margin-top:12px;"></div>
+      <div style="padding:10px; background:#ecf0f1; border-radius:6px; margin-top:8px; text-align:center;">
+        Total Amount = Rs. <span id="khataTotal">0</span>
+        <button onclick="printKhata()" style="float:right; background:#27ae60;">🖨 Print</button>
+      </div>
+    </div>
+
+  </div>
+  <!-- end container -->
+
+<script>
+/* ---------------------------- Main JS (all functions) ---------------------------- */
+
+document.addEventListener('DOMContentLoaded', function(){
+
+  function showPage(page){
+    const pages = ['pos','calc','basicCalc','stock','dasti','khata'];
+    pages.forEach(p=> document.getElementById(p).style.display = (p===page?'block':'none'));
+    if(page==='pos') updateHistory();
+    if(page==='khata') renderKhata();
+  }
+  window.showPage = showPage;
+
+  // state & localStorage
+  let sales = JSON.parse(localStorage.getItem('sales')) || [];
+  let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+  let baqaya = JSON.parse(localStorage.getItem('baqaya')) || [];
+  let deleteLog = JSON.parse(localStorage.getItem('deleteLog')) || [];
+  let stockItems = JSON.parse(localStorage.getItem('stockItems')) || []; // {name, category}
+  let dastiItems = JSON.parse(localStorage.getItem('dastiItems')) || [];
+  let categories = JSON.parse(localStorage.getItem('categories')) || ['General'];
+  let billNo = sales.length ? Math.max(...sales.map(s=>s.billNo)) : 0;
+  let expenseNo = expenses.length ? Math.max(...expenses.map(e=>e.expenseNo)) : 0;
+  let pendingSale = null;
+  let pendingBaqaya = null;
+
+  function fmt2(n){ return Number(n).toFixed(2); }
+  function formatAMPM(dt){ let h=dt.getHours(), m=dt.getMinutes(), am=(h>=12?'PM':'AM'); h%=12; if(!h) h=12; m = m<10?('0'+m):m; return `${h}:${m} ${am}`; }
+
+  /* ---------- Update UI History & Totals ---------- */
+  function updateHistory(){
+    // sales
+    const sList = document.getElementById('salesList'); sList.innerHTML = sales.length ? '' : '<em>No sales yet.</em>';
+    sales.forEach(s=>{
+      const p = document.createElement('div'); p.className='list-row';
+      p.innerHTML = `<div class="list-left"><b>QBS-${s.billNo}</b> — Rs.${fmt2(s.amount)} <br><small>${s.time}</small></div>
+                     <div style="display:flex;gap:6px;"><button class="btn-small btn-print" onclick="reprintSale(${s.billNo})">🖨</button>
+                     <button class="btn-small btn-del" onclick="deleteSale(${s.billNo})">❌</button></div>`;
+      sList.appendChild(p);
+    });
+
+    // expenses
+    const eList = document.getElementById('expenseList'); eList.innerHTML = expenses.length ? '' : '<em>No expenses yet.</em>';
+    expenses.forEach(e=>{
+      const p = document.createElement('div'); p.className='list-row';
+      p.innerHTML = `<div class="list-left">Rs.${fmt2(e.amount)} <br><small>${e.time}</small></div>
+                     <div><button class="btn-small btn-del" onclick="deleteExpense(${e.expenseNo})">❌</button></div>`;
+      eList.appendChild(p);
+    });
+
+    // baqaya
+    const bList = document.getElementById('baqayaList'); bList.innerHTML = baqaya.length ? '' : '<em>No Baqaya yet.</em>';
+    baqaya.forEach((b,i)=>{
+      const p = document.createElement('div'); p.className='list-row';
+      p.innerHTML = `<div class="list-left">Rs.${fmt2(b.amount)} <br><small>${b.time}</small></div>
+                     <div style="display:flex; gap:6px;"><button class="btn-small btn-print" onclick="reprintBaqaya(${i})">🖨</button>
+                     <button class="btn-small btn-del" onclick="deleteBaqaya('${b.time}')">❌</button></div>`;
+      bList.appendChild(p);
+    });
+
+    // delete log
+    const dList = document.getElementById('deleteList'); dList.innerHTML = deleteLog.length ? '' : '<em>Empty</em>';
+    deleteLog.forEach(d=>{
+      const div = document.createElement('div'); div.className='delete-log'; div.innerText = d; dList.appendChild(div);
+    });
+
+    // totals
+    document.getElementById('totalSales').innerText = sales.length;
+    document.getElementById('grandTotal').innerText = fmt2(sales.reduce((a,c)=>a+Number(c.amount||0),0));
+    document.getElementById('totalExpenses').innerText = expenses.length;
+    document.getElementById('grandExpense').innerText = fmt2(expenses.reduce((a,c)=>a+Number(c.amount||0),0));
+  }
+
+  /* ---------- Receipts builders ---------- */
+  function buildSaleSlip(amt,billNo,date,time){
+    return `<div style="width:320px;text-align:center;margin:0 auto;">
+      <div style="font-size:22px;font-weight:bold;">قادربخش اسٹور</div>
+      <div style="font-size:13px;">Date: ${date} | ${time}</div>
+      <div style="font-size:14px;margin-top:6px;">Bill No: QBS-${billNo}</div>
+      <div style="margin:10px 0;font-size:34px;font-weight:bold;">Rs. ${fmt2(amt)}</div>
+      <div style="border-top:1px solid #000;margin:8px 0;"></div>
+      <div style="font-size:13px;">شکریہ، دوبارہ آئیں</div>
+    </div>`;
+  }
+  function buildBaqayaSlip(amt,date,time){
+    return `<div style="width:320px;text-align:center;margin:0 auto;">
+      <div style="font-size:22px;font-weight:bold;">قادربخش اسٹور</div>
+      <div style="font-size:13px;">${date} | ${time}</div>
+      <div style="margin:8px 0;font-size:28px;font-weight:bold;">بقایا</div>
+      <div style="font-size:28px;font-weight:bold;margin:8px 0;">Rs. ${fmt2(amt)}</div>
+      <div style="border-top:1px solid #000;margin:8px 0;"></div>
+      <div style="font-size:13px;">یہ سلپ سنبھال کر رکھیں</div>
+    </div>`;
+  }
+
+  /* ---------- POS: Print & Save sale ---------- */
+  window.printBill = function(){
+    let amt = document.getElementById('amount').value;
+    if(!amt){ alert('Enter amount'); return; }
+    amt = Number(amt);
+    billNo++;
+    const now = new Date();
+    const d = now.toLocaleDateString();
+    const t = formatAMPM(now);
+    pendingSale = { billNo, amount: amt, time: `${d} ${t}` };
+    document.getElementById('printSection').innerHTML = buildSaleSlip(amt,billNo,d,t);
+    document.getElementById('printSection').style.display = 'block';
+    setTimeout(()=>{ window.print(); },200);
+  };
+
+  window.reprintSale = function(bill){
+    const s = sales.find(x=>x.billNo===bill);
+    if(!s) return;
+    const parts = s.time.split(' ');
+    const date = parts[0]; const time = parts.slice(1).join(' ');
+    document.getElementById('printSection').innerHTML = buildSaleSlip(s.amount,s.billNo,date,time);
+    document.getElementById('printSection').style.display = 'block';
+    setTimeout(()=>{ window.print(); },200);
+  };
+
+  window.deleteSale = function(bill){
+    if(!confirm('Delete this sale?')) return;
+    const idx = sales.findIndex(x=>x.billNo===bill);
+    if(idx>-1){
+      const s = sales[idx];
+      sales.splice(idx,1);
+      localStorage.setItem('sales',JSON.stringify(sales));
+      deleteLog.push(`Deleted Sale QBS-${bill}, Rs.${s.amount}`);
+      localStorage.setItem('deleteLog',JSON.stringify(deleteLog));
+      updateHistory();
+    }
+  };
+
+  /* ---------- after print handling ---------- */
+  window.onafterprint = function(){
+    if(pendingSale){
+      sales.push(pendingSale);
+      localStorage.setItem('sales', JSON.stringify(sales));
+      pendingSale = null;
+    }
+    if(pendingBaqaya){
+      baqaya.push(pendingBaqaya);
+      localStorage.setItem('baqaya', JSON.stringify(baqaya));
+      pendingBaqaya = null;
+    }
+    document.getElementById('printSection').style.display = 'none';
+    document.getElementById('amount').value = '';
+    document.getElementById('baqayaAmount').value = '';
+    updateHistory();
+  };
+
+  /* ---------- Expenses ---------- */
+  window.addExpense = function(){
+    let amt = document.getElementById('expense').value;
+    if(!amt){ alert('Enter expense'); return; }
+    amt = Number(amt);
+    expenseNo++;
+    const now = new Date(); const d = now.toLocaleDateString(); const t = formatAMPM(now);
+    expenses.push({ expenseNo, amount: amt, time: `${d} ${t}` });
+    localStorage.setItem('expenses', JSON.stringify(expenses));
+    document.getElementById('expense').value = '';
+    updateHistory();
+  };
+
+  window.deleteExpense = function(no){
+    if(!confirm('Delete this expense?')) return;
+    const idx = expenses.findIndex(x=>x.expenseNo===no);
+    if(idx>-1){
+      const e = expenses[idx];
+      expenses.splice(idx,1);
+      localStorage.setItem('expenses', JSON.stringify(expenses));
+      deleteLog.push(`Deleted Expense No-${no}, Rs.${e.amount}`);
+      localStorage.setItem('deleteLog', JSON.stringify(deleteLog));
+      updateHistory();
+    }
+  };
+
+  /* ---------- Baqaya ---------- */
+  window.printBaqaya = function(){
+    let amt = document.getElementById('baqayaAmount').value;
+    if(!amt){ alert('بقایا رقم درج کریں'); return; }
+    amt = Number(amt);
+    const now = new Date(); const d = now.toLocaleDateString(); const t = formatAMPM(now);
+    pendingBaqaya = { amount: amt, time: `${d} ${t}` };
+    document.getElementById('printSection').innerHTML = buildBaqayaSlip(amt,d,t);
+    document.getElementById('printSection').style.display = 'block';
+    setTimeout(()=>{ window.print(); },200);
+  };
+
+  window.reprintBaqaya = function(i){
+    const b = baqaya[i];
+    if(!b) return;
+    const parts = b.time.split(' ');
+    const date = parts[0]; const time = parts.slice(1).join(' ');
+    document.getElementById('printSection').innerHTML = buildBaqayaSlip(b.amount,date,time);
+    document.getElementById('printSection').style.display = 'block';
+    setTimeout(()=>{ window.print(); },200);
+  };
+
+  window.deleteBaqaya = function(time){
+    if(!confirm('Delete this baqaya?')) return;
+    const idx = baqaya.findIndex(x=>x.time===time);
+    if(idx>-1){
+      const b = baqaya[idx];
+      baqaya.splice(idx,1);
+      localStorage.setItem('baqaya', JSON.stringify(baqaya));
+      deleteLog.push(`Deleted Baqaya Rs.${b.amount} at ${b.time}`);
+      localStorage.setItem('deleteLog', JSON.stringify(deleteLog));
+      updateHistory();
+    }
+  };
+
+  /* ---------- Clear helpers ---------- */
+  window.clearSales = function(){ if(confirm('Clear all sales?')){ sales=[]; billNo=0; localStorage.setItem('sales', JSON.stringify(sales)); updateHistory(); } };
+  window.clearExpenses = function(){ if(confirm('Clear all expenses?')){ expenses=[]; expenseNo=0; localStorage.setItem('expenses', JSON.stringify(expenses)); updateHistory(); } };
+  window.clearBaqaya = function(){ if(confirm('Clear all baqaya?')){ baqaya=[]; localStorage.setItem('baqaya', JSON.stringify(baqaya)); updateHistory(); } };
+  window.clearDeleteLog = function(){ if(confirm('Clear delete log?')){ deleteLog=[]; localStorage.setItem('deleteLog', JSON.stringify(deleteLog)); updateHistory(); } };
+
+  /* ---------- Basic Calculator ---------- */
+
+  // --- Calculator (with delete option in history) ---
+  const BasicCalc=(function(){
+
+    let input = '';
+    let total = 0;
+    const d = document.getElementById('calcDisplay');
+    const h = document.getElementById('basicCalcHistory');
+    const totalBox = document.getElementById('calcTotal');
+
+    function press(v){ input += v; d.value = input; d.focus(); }
+    function backspace(){ input = input.slice(0,-1); d.value = input; }
+    function clearAllC(){ input=''; d.value=''; h.innerHTML=''; total=0; totalBox.innerText = 0; }
+    function calculate(){
+      try{
+        if(!input) return;
+        let r = eval(input);
+        if(typeof r === 'number' && isFinite(r)){
+          const line = document.createElement('div');
+          line.innerHTML = input + " = " + r + 
+            ` <button class="btn-del" onclick="deleteCalcEntry(${r}, this)">❌</button>`;
+          h.appendChild(line);
+          total += r;
+          totalBox.innerText = total;
+          input = '';
+          d.value = '';
+        } else {
+          alert('Invalid result');
+        }
+      }catch(e){
+        alert('Invalid expression');
+      }
+    }
+    d.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' || e.key === '='){ e.preventDefault(); calculate(); }
+    });
+    d.addEventListener('input', ()=>{ input = d.value; });
+
+
+    let calcSN = 1;
+    function calculate(){
+      try{
+        if(!input) return;
+        let r = eval(input);
+        if(typeof r === 'number' && isFinite(r)){
+          const line = document.createElement('div');
+          line.innerHTML = (calcSN++) + ". " + input + " = " + r + 
+            ` <button class="btn-del" onclick="deleteCalcEntry(${r}, this)">❌</button>`;
+          h.appendChild(line);
+          total += r;
+          totalBox.innerText = total;
+          input = '';
+          d.value = '';
+        } else {
+          alert('Invalid result');
+        }
+      }catch(e){
+        alert('Invalid expression');
+      }
+    }
+    function clearAllC(){ input=''; d.value=''; h.innerHTML=''; total=0; totalBox.innerText = 0; calcSN=1; }
+    return { press, backspace, clearAllC, calculate };
+  })();
+
+  function pressCalc(v){ BasicCalc.press(v); }
+  function backspaceCalc(){ BasicCalc.backspace(); }
+  window.clearCalc = function(){ 
+        BasicCalc.clearAllC(); 
+        document.getElementById('calcDisplay').value=''; 
+        document.getElementById('basicCalcHistory').innerHTML=''; 
+        document.getElementById('calcTotal').innerText = 0; 
+    }
+  function calculateResult(){ BasicCalc.calculate(); }
+
+  window.deleteCalcEntry = function(value, btn){
+    btn.parentElement.remove();
+    let totalBox = document.getElementById("calcTotal");
+    let current = parseFloat(totalBox.innerText) || 0;
+    current -= value;
+    // Fix negative zero rounding issues
+    current = Math.round((current + Number.EPSILON) * 100) / 100;
+    totalBox.innerText = current;
+  }
+
+  window.printCalc = function(){
+    let history = document.getElementById("basicCalcHistory").innerHTML;
+    let total = document.getElementById("calcTotal").innerText;
+    let sec = document.getElementById("printSection");
+    let now = new Date();
+    sec.innerHTML = `<div style="width:320px; text-align:center;">
+      <div style="font-size:22px; font-weight:bold;">قادربخش اسٹور</div>
+      <div style="font-size:14px;">📞 03056184239</div>
+      <div style="font-size:20px; font-weight:bold; margin-top:6px;">Calculator History</div>
+      <div style="font-size:12px; margin-bottom:8px;">${now.toLocaleString()}</div>
+      ${history}
+      <hr>
+      <div style="font-weight:bold;">Total = ${total}</div>
+    </div>`;
+    sec.style.display = "block";
+    setTimeout(()=>{ window.print(); }, 200);
+  }
+
+  /* ---------- Graming Calculator ---------- */
+  window.calcAmount = function(){
+    const rate = parseFloat(document.getElementById('rate').value || 0);
+    const grams = parseFloat(document.getElementById('grams').value || 0);
+    if(rate>0 && grams>0){
+      const amount = (rate/1000)*grams;
+      document.getElementById('result').innerText = 'Price = Rs ' + amount.toFixed(2);
+    } else alert('Rate aur Grams dono enter karein!');
+  };
+  window.calcGrams = function(){
+    const rate = parseFloat(document.getElementById('rate').value || 0);
+    const amount = parseFloat(document.getElementById('calcAmountInput').value || 0);
+    if(rate>0 && amount>0){
+      const grams = (amount/rate)*1000;
+      document.getElementById('result').innerText = 'Grams = ' + grams.toFixed(2) + ' g';
+    } else alert('Rate aur Amount dono enter karein!');
+  };
+  window.clearAllCalc = function(){ document.getElementById('rate').value=''; document.getElementById('grams').value=''; document.getElementById('calcAmountInput').value=''; document.getElementById('result').innerText=''; };
+
+  /* ---------- Out of Stock & Categories ---------- */
+  function saveCategories(){ localStorage.setItem('categories', JSON.stringify(categories)); populateCategorySelects(); renderCategoriesList(); }
+  window.addCategory = function(){
+    const v = document.getElementById('newCategoryInput').value.trim();
+    if(!v) return alert('Enter category');
+    if(categories.includes(v)) return alert('Category already exists');
+    categories.push(v);
+    document.getElementById('newCategoryInput').value='';
+    saveCategories();
+    renderStock();
+  };
+  window.deleteCategory = function(idx){
+    if(!confirm('Delete this category?')) return;
+    const cat = categories[idx];
+    stockItems = stockItems.map(it => it.category===cat ? { name: it.name, category:'General' } : it);
+    categories.splice(idx,1);
+    if(categories.length===0) categories.push('General');
+    localStorage.setItem('stockItems', JSON.stringify(stockItems));
+    saveCategories();
+    renderStock();
+  };
+  window.renameCategory = function(i){
+    const newName = prompt('Rename category:', categories[i]);
+    if(newName===null) return;
+    const v = newName.trim(); if(!v) return;
+    const old = categories[i]; categories[i]=v;
+    stockItems = stockItems.map(it => it.category===old ? { name: it.name, category: v } : it);
+    localStorage.setItem('stockItems', JSON.stringify(stockItems));
+    saveCategories();
+    renderStock();
+  };
+
+  function populateCategorySelects(){
+    const sel = document.getElementById('stockCategorySelect');
+    const filter = document.getElementById('filterCategory');
+    if(!sel || !filter) return;
+    sel.innerHTML=''; filter.innerHTML='';
+    const allOpt = document.createElement('option'); allOpt.value='ALL'; allOpt.innerText='All Categories'; filter.appendChild(allOpt);
+    categories.forEach(c=>{
+      const o = document.createElement('option'); o.value=c; o.innerText=c; sel.appendChild(o);
+      const o2 = document.createElement('option'); o2.value=c; o2.innerText=c; filter.appendChild(o2);
+    });
+  }
+
+  window.renderStock = function(){
+    const list = document.getElementById('outOfStockList'); list.innerHTML='';
+    const filter = document.getElementById('filterCategory')?.value || 'ALL';
+    if(stockItems.length===0){ list.innerHTML = '<em>No out of stock items</em>'; return; }
+    stockItems.forEach((it,i)=>{
+      if(filter && filter!=='ALL' && it.category !== filter) return;
+      const div = document.createElement('div'); div.className='list-row';
+      div.innerHTML = `<div class="list-left">${it.name}<span class="category-badge">${it.category}</span></div>
+        <div style="display:flex; gap:6px;"><button class="btn-small btn-print" onclick="printStock(${i})">🖨</button>
+        <button class="btn-small btn-edit" onclick="editStock(${i})">✏️</button>
+        <button class="btn-small btn-del" onclick="deleteStock(${i})">❌</button></div>`;
+      list.appendChild(div);
+    });
+  };
+
+  window.addStock = function(){
+    const v = document.getElementById('stockInput').value.trim();
+    const cat = document.getElementById('stockCategorySelect').value || 'General';
+    if(!v) return;
+    stockItems.push({ name: v, category: cat });
+    localStorage.setItem('stockItems', JSON.stringify(stockItems));
+    document.getElementById('stockInput').value='';
+    renderStock();
+  };
+
+  window.editStock = function(i){
+    const item = stockItems[i];
+    const newName = prompt('Edit item:', item.name);
+    if(newName===null) return;
+    const v = newName.trim(); if(!v) return;
+    const cat = prompt(`Enter category for this item (existing: ${item.category}). Available: ${categories.join(', ')}`, item.category);
+    if(cat === null) return;
+    const cval = cat.trim() || 'General';
+    if(!categories.includes(cval)){ categories.push(cval); saveCategories(); }
+    stockItems[i] = { name: v, category: cval };
+    localStorage.setItem('stockItems', JSON.stringify(stockItems));
+    renderCategoriesList(); renderStock();
+  };
+
+  window.deleteStock = function(i){
+    if(!confirm('Delete this item?')) return;
+    const removed = stockItems.splice(i,1);
+    localStorage.setItem('stockItems', JSON.stringify(stockItems));
+    deleteLog.push(`Deleted Stock: ${removed[0].name} (${removed[0].category})`);
+    localStorage.setItem('deleteLog', JSON.stringify(deleteLog));
+    renderStock(); updateHistory();
+  };
+  window.clearStock = function(){ if(confirm('Clear all out of stock items?')){ stockItems=[]; localStorage.setItem('stockItems', JSON.stringify(stockItems)); renderStock(); } };
+  window.printStock = function(i){
+    const item = stockItems[i]; if(!item) return;
+    const now = new Date(); const d = now.toLocaleDateString(); const t = formatAMPM(now);
+    const html = `<div style="text-align:center;"><strong>Out of Stock</strong><div style="margin-top:6px;">${item.name}</div><div style="font-size:13px;margin-top:6px;">Category: ${item.category}</div><div style="margin-top:10px;">${d} ${t}</div></div>`;
+    document.getElementById('printSection').innerHTML = html; document.getElementById('printSection').style.display='block'; setTimeout(()=>window.print(),200);
+  };
+
+  function renderCategoriesList(){
+    const el = document.getElementById('categoriesList'); el.innerHTML='';
+    categories.forEach((c,i)=>{
+      const row = document.createElement('div');
+      row.style.display='flex'; row.style.justifyContent='space-between'; row.style.alignItems='center'; row.style.padding='6px 4px';
+      row.innerHTML = `<div>${c}</div><div><button class="btn-small btn-edit" onclick="renameCategory(${i})">✏️</button> <button class="btn-small btn-del" onclick="deleteCategory(${i})">❌</button></div>`;
+      el.appendChild(row);
+    });
+  }
+
+  /* ---------- Dasti Baqaya ---------- */
+  function renderDasti(){
+    const list = document.getElementById('dastiBaqayaList'); list.innerHTML = dastiItems.length ? '' : '<em>No dasti entries</em>';
+    dastiItems.forEach((it,i)=>{
+      const div = document.createElement('div'); div.className='list-row';
+      div.innerHTML = `<div class="list-left">${it.text} <br><small>${it.time}</small></div>
+                       <div style="display:flex;gap:6px;"><button class="btn-small btn-print" onclick="printDasti(${i})">🖨</button>
+                       <button class="btn-small btn-edit" onclick="editDasti(${i})">✏️</button>
+                       <button class="btn-small btn-del" onclick="deleteDasti(${i})">❌</button></div>`;
+      list.appendChild(div);
+    });
+  }
+
+  window.addDasti = function(){
+    const v = document.getElementById('dastiInput').value.trim(); if(!v) return;
+    const now = new Date(); const time = now.toLocaleDateString() + ' ' + formatAMPM(now);
+    dastiItems.push({ text: v, time });
+    localStorage.setItem('dastiItems', JSON.stringify(dastiItems));
+    document.getElementById('dastiInput').value=''; renderDasti();
+    renderKhata();
+  };
+  window.editDasti = function(i){
+    const nv = prompt('Edit entry:', dastiItems[i].text); if(nv===null) return;
+    dastiItems[i].text = nv.trim(); localStorage.setItem('dastiItems', JSON.stringify(dastiItems)); renderDasti();
+    renderKhata();
+  };
+  window.deleteDasti = function(i){ if(!confirm('Delete this dasti entry?')) return; dastiItems.splice(i,1); localStorage.setItem('dastiItems', JSON.stringify(dastiItems)); renderDasti();
+    renderKhata(); };
+  window.clearDasti = function(){ if(confirm('Clear all dasti entries?')){ dastiItems=[]; localStorage.setItem('dastiItems', JSON.stringify(dastiItems)); renderDasti();
+    renderKhata(); } };
+  window.printDasti = function(i){
+    const it = dastiItems[i]; if(!it) return;
+    const parts = it.time.split(' '); const date = parts[0]; const time = parts.slice(1).join(' ');
+    const html = `<div style="text-align:center;"><strong>دستی بقایا</strong><div style="margin-top:8px;">${it.text}</div><div style="margin-top:8px;">${date} ${time}</div></div>`;
+    document.getElementById('printSection').innerHTML=html; document.getElementById('printSection').style.display='block'; setTimeout(()=>window.print(),200);
+  };
+
+  /* ---------- Khata Wasooli List ---------- */
+  let khataItems = JSON.parse(localStorage.getItem('khataItems')) || [];
+
+  function renderKhata(){
+    const list = document.getElementById('khataList');
+    const searchVal = document.getElementById('khataSearch') ? document.getElementById('khataSearch').value.toLowerCase() : '';
+    list.innerHTML = '';
+    let total = 0; let sn=1;
+    const filtered = khataItems.filter(it => !searchVal || it.name.toLowerCase().includes(searchVal));
+    if(filtered.length===0){ list.innerHTML = '<em>No entries</em>'; document.getElementById('khataTotal').innerText = '0'; return; }
+    filtered.forEach((it,i)=>{
+      total += Number(it.amount);
+      // Highlight match in name
+      let displayName = it.name;
+      if(searchVal){
+        const regex = new RegExp('('+searchVal+')','ig');
+        displayName = it.name.replace(regex, '<mark>$1</mark>');
+      }
+      const div = document.createElement('div'); div.className='list-row';
+      div.innerHTML = `<div class="list-left"><b>${sn++}. ${displayName}</b> - Rs.${it.amount} <br><small>${it.time}</small></div>
+                       <div style="display:flex;gap:6px;">
+                         <button class="btn-small btn-print" onclick="printKhataEntry(${khataItems.indexOf(it)})">🖨</button>
+                         <button class="btn-small btn-edit" onclick="editKhata(${khataItems.indexOf(it)})">✏️</button>
+                         <button class="btn-small btn-del" onclick="deleteKhata(${khataItems.indexOf(it)})">❌</button>
+                       </div>`;
+      list.appendChild(div);
+    });
+    document.getElementById('khataTotal').innerText = total.toFixed(2);
+  }
+
+  window.clearKhataSearch
+ = function(){
+    document.getElementById('khataSearch').value='';
+    renderKhata();
+  };
+
+  window.printKhataEntry
+ = function(i){
+    const it = khataItems[i]; if(!it) return;
+    const html = `<div style="width:320px; text-align:center;">
+      <div style="font-size:20px; font-weight:bold;">قادربخش اسٹور</div>
+      <div style="font-size:14px; margin-bottom:8px;">Khata Wasooli Entry</div>
+      <div style="margin:6px 0; text-align:left;"><b>${it.name}</b> - Rs.${it.amount} <br><small>${it.time}</small></div>
+    </div>`;
+    const sec = document.getElementById('printSection');
+    sec.innerHTML = html; sec.style.display='block'; setTimeout(()=>window.print(),200);
+  }
+
+  window.printKhataEntry = function(i){
+    const it = khataItems[i]; if(!it) return;
+    const html = `<div style="width:320px; text-align:center;">
+      <div style="font-size:20px; font-weight:bold;">قادربخش اسٹور</div>
+      <div style="font-size:14px; margin-bottom:8px;">Khata Wasooli Entry</div>
+      <div style="margin:6px 0; text-align:left;"><b>${it.name}</b> - Rs.${it.amount} <br><small>${it.time}</small></div>
+    </div>`;
+    const sec = document.getElementById('printSection');
+    sec.innerHTML = html; sec.style.display='block'; setTimeout(()=>window.print(),200);
+  }
+
+  window.addKhata = function(){
+    const name = document.getElementById('khataName').value.trim();
+    const amt = document.getElementById('khataAmount').value.trim();
+    if(!name || !amt) return alert('Enter name and amount');
+    const now = new Date(); const time = now.toLocaleDateString() + ' ' + formatAMPM(now);
+    khataItems.push({ name, amount:Number(amt), time });
+    localStorage.setItem('khataItems', JSON.stringify(khataItems));
+    document.getElementById('khataName').value=''; document.getElementById('khataAmount').value='';
+    renderKhata();
+  };
+
+  window.editKhata = function(i){
+    const nv = prompt('Edit name:', khataItems[i].name);
+    if(nv===null) return;
+    const na = prompt('Edit amount:', khataItems[i].amount);
+    if(na===null) return;
+    khataItems[i].name = nv.trim();
+    khataItems[i].amount = Number(na);
+    localStorage.setItem('khataItems', JSON.stringify(khataItems));
+    renderKhata();
+  };
+
+  window.deleteKhata = function(i){
+    if(!confirm('Delete this entry?')) return;
+    khataItems.splice(i,1);
+    localStorage.setItem('khataItems', JSON.stringify(khataItems));
+    renderKhata();
+  };
+
+  window.clearKhata = function(){
+    if(confirm('Clear all Khata entries?')){
+      khataItems=[];
+      localStorage.setItem('khataItems', JSON.stringify(khataItems));
+      renderKhata();
+    }
+  };
+
+  window.printKhata = function(){
+    let total = khataItems.reduce((a,c)=>a+Number(c.amount),0).toFixed(2);
+    let html = `<div style="width:320px; text-align:center;">
+      <div style="font-size:20px; font-weight:bold;">قادربخش اسٹور</div>
+      <div style="font-size:14px; margin-bottom:8px;">Khata Wasooli List</div>`;
+    khataItems.forEach((it,idx)=>{ html += `<div style=\"margin:6px 0; text-align:left;\">${idx+1}. ${it.name} - Rs.${it.amount} <br><small>${it.time}</small></div>`; }); html += `<hr><div style="font-weight:bold;">Total = Rs.${total}</div></div>`;
+    const sec = document.getElementById('printSection');
+    sec.innerHTML = html; sec.style.display='block'; setTimeout(()=>window.print(),200);
+  };
+
+
+  /* ---------- WhatsApp share ---------- */
+  window.sendToWhatsApp = function(){
+    let message = "📌 QADIR BAKHSH STORE REPORT\n\n";
+    message += "🛒 Sales:\n"; sales.forEach(s=>{ message += `QBS-${s.billNo} - Rs.${s.amount} (${s.time})\n`; });
+    message += "\n💸 Expenses:\n"; expenses.forEach(e=>{ message += `Rs.${e.amount} (${e.time})\n`; });
+    message += `\n✅ Total Sales: ${sales.length} | Grand Rs.${fmt2(sales.reduce((a,c)=>a+Number(c.amount||0),0))}\n`;
+    message += `✅ Total Expenses: ${expenses.length} | Grand Rs.${fmt2(expenses.reduce((a,c)=>a+Number(c.amount||0),0))}\n`;
+    const phone = "923056184239";
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url,'_blank');
+  };
+
+  /* ---------- Totals toggle (hidden by default, ask password to show) ---------- */
+  let totalsPassword = localStorage.getItem('totalsPassword') || '1234';
+
+  window.toggleTotals = function(){
+    const box = document.getElementById('totalsContent');
+    const btn = document.getElementById('totalsToggleBtn');
+    // If currently hidden -> ask password to show
+    if(!box || !btn) return;
+    if(box.style.display === 'none' || box.style.display === ''){
+      const pwd = prompt('Enter password to view totals:');
+      if(pwd === totalsPassword){
+        box.style.display = 'block';
+        btn.innerText = '👁 Hide';
+      } else {
+        alert('Wrong password!');
+      }
+    } else {
+      // hide without password
+      box.style.display = 'none';
+      btn.innerText = '👁 Show';
+    }
+  };
+
+  window.changePassword = function(){
+    const newPwd = prompt('Enter new password:');
+    if(newPwd && newPwd.trim() !== ''){
+        totalsPassword = newPwd.trim();
+        localStorage.setItem('totalsPassword', totalsPassword);
+        alert('Password changed successfully!');
+    } else {
+        alert('Password not changed.');
+    }
+  };
+
+  /* ---------- After print save (duplicate safe guard removed) ---------- */
+  // onafterprint already handled above
+
+  /* ---------- Shortcuts: Enter key ---------- */
+  document.getElementById('amount').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); printBill(); } });
+  document.getElementById('expense').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); addExpense(); } });
+
+  /* ---------- Initialization ---------- */
+  function init(){
+    // read persisted lists
+    sales = JSON.parse(localStorage.getItem('sales')) || sales;
+    expenses = JSON.parse(localStorage.getItem('expenses')) || expenses;
+    baqaya = JSON.parse(localStorage.getItem('baqaya')) || baqaya;
+    deleteLog = JSON.parse(localStorage.getItem('deleteLog')) || deleteLog;
+    stockItems = JSON.parse(localStorage.getItem('stockItems')) || stockItems;
+    dastiItems = JSON.parse(localStorage.getItem('dastiItems')) || dastiItems;
+    categories = JSON.parse(localStorage.getItem('categories')) || categories;
+
+    populateCategorySelects();
+    renderCategoriesList();
+    renderStock();
+    renderDasti();
+    renderKhata();
+    updateHistory();
+    // ensure totals are hidden on startup
+    const totalsBox = document.getElementById('totalsContent');
+    const totalsBtn = document.getElementById('totalsToggleBtn');
+    if(totalsBox) totalsBox.style.display = 'none';
+    if(totalsBtn) totalsBtn.innerText = '👁 Show';
+    showPage('pos');
+  }
+
+  init();
+
+}); // end DOMContentLoaded
+</script>
+</body>
+</html>
